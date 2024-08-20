@@ -1,105 +1,147 @@
 <?php
-error_reporting(0);
-ini_set('display_errors', 0);
-header("Cache-Control: max-age=20, public");
-function fetchData(string $url): ?string {
-    return ($data = @file_get_contents($url)) !== false ? trim($data) : null;
-}
-function fetchMPDManifest(string $url): ?string {
-    $curl = curl_init($url);
-    curl_setopt_array($curl, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => [
-            'X-Forwarded-For: 59.178.72.184'
+// Define the payload as an associative array
+$payload = [
+    '4k' => false,
+    'ageGroup' => '18+',
+    'appVersion' => '3.4.0',
+    'bitrateProfile' => 'xhdpi',
+    'capability' => [
+        'drmCapability' => [
+            'aesSupport' => 'yes',
+            'fairPlayDrmSupport' => 'yes',
+            'playreadyDrmSupport' => 'none',
+            'widevineDRMSupport' => 'yes',
         ],
-    ]);
-    $content = curl_exec($curl);
-    curl_close($curl);
-    return $content !== false ? $content : null;
-}
-function extractPsshFromManifest(string $content, string $baseUrl): ?array {
-    if (($xml = @simplexml_load_string($content)) === false) return null;
-    foreach ($xml->Period->AdaptationSet as $set) {
-        if ((string)$set['contentType'] === 'audio') {
-            foreach ($set->Representation as $rep) {
-                $template = $rep->SegmentTemplate ?? null;
-                if ($template) {
-                    $media = str_replace(['$RepresentationID$', '$Number$'], [(string)$rep['id'], (int)($template['startNumber'] ?? 0) + (int)($template->SegmentTimeline->S['r'] ?? 0)], $template['media']);
-                    $url = "$baseUrl/dash/$media";
-                    $context = stream_context_create([
-                        'http' => ['method' => 'GET', 'header' => 'X-Forwarded-For: 59.178.72.184'],
-                    ]);
-                    if (($content = @file_get_contents($url, false, $context)) !== false) {
-                        $hex = bin2hex($content);
-                        $marker = "000000387073736800000000edef8ba979d64acea3c827dcd51d21ed000000";
-                        if (($pos = strpos($hex, $marker)) !== false && ($end = strpos($hex, "0000", $pos + strlen($marker))) !== false) {
-                            $psshHex = substr($hex, $pos, $end - $pos - 12);
-                            $psshHex = str_replace("000000387073736800000000edef8ba979d64acea3c827dcd51d21ed00000018", "000000327073736800000000edef8ba979d64acea3c827dcd51d21ed00000012", $psshHex);
-                            $kidHex = substr($psshHex, 68, 32);
-                            return [
-                                'pssh' => base64_encode(hex2bin($psshHex)),
-                                'kid' => substr($kidHex, 0, 8) . "-" . substr($kidHex, 8, 4) . "-" . substr($kidHex, 12, 4) . "-" . substr($kidHex, 16, 4) . "-" . substr($kidHex, 20)
-                            ];
-                        }
-                    }
+        'frameRateCapability' => [
+            [
+                'frameRateSupport' => '30fps',
+                'videoQuality' => '1440p',
+            ],
+        ],
+    ],
+    'continueWatchingRequired' => true,
+    'dolby' => false,
+    'downloadRequest' => false,
+    'hevc' => false,
+    'kidsSafe' => false,
+    'manufacturer' => 'Linux',
+    'model' => 'Linux',
+    'multiAudioRequired' => true,
+    'osVersion' => 'x86_64',
+    'parentalPinValid' => true,
+    'x-apisignatures' => 'o668nxgzwff',
+];
+
+// Convert the payload to JSON
+$json_payload = json_encode($payload);
+
+// API URL
+$url = "https://apis-jiovoot.voot.com/playbackjv/v5/3479312";
+
+// Headers
+$user_agent = 'Mozilla/5.0 (Linux; Android 10; BRAVIA 4K VH2 Build/QTG3.200305.006.S292; wv)';
+$headers = [
+    'authority: apis-jiovoot.voot.com',
+    'accept: application/json, text/plain, */*',
+    'accept-language: en-GB,en-US;q=0.9,en;q=0.8',
+    'accesstoken: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJJZCI6IjliMjAyZDRhLWY5NmUtNGI3YS1hYTEyLTcyMzAxYTRiNjQ5NyIsInVzZXJUeXBlIjoiR1VFU1QiLCJhcHBOYW1lIjoiUkpJTF9KaW9DaW5lbWEiLCJkZXZpY2VJZCI6ImFlMmQ0NzU2LWEyZjctNDcyMy1jZDc5LTgzNTE3NDI2OWVmMCIsImRldmljZVR5cGUiOiJwYyIsIm9zIjoid2ViIiwicHJvZmlsZUlkIjoiNGI5ZDY5ZjktY2MyYi0xMjQ3LTI0NDItNjJhNGIwOGQ0Y2IyIiwiYWRJZCI6ImFlMmQ0NzU2LWEyZjctNDcyMy1jZDc5LTgzNTE3NDI2OWVmMCIsImV4cGVyaW1lbnRLZXkiOnsiY29uZmlnS2V5IjoiNGI5ZDY5ZjktY2MyYi0xMjQ3LTI0NDItNjJhNGIwOGQ0Y2IyIiwiZ3JvdXBJZCI6MjI4Nn0sInByb2ZpbGVEZXRhaWxzIjp7InByb2ZpbGVUeXBlIjoiYWR1bHQiLCJjb250ZW50QWdlUmF0aW5nIjoiQSJ9LCJ2ZXJzaW9uIjoyMDI0MDMwNDB9LCJleHAiOjE3MjYyMzQ0OTcsImlhdCI6MTcyMzY0MjQ5N30.0szYuRB-DwGbsmhdt4xJwMgu9r_swCc8QjE9HV4LEXrILnR1MdzIzR0Vl6_k6HcgA_J7ZyEvmLOcvlnPS7xzog',
+    'appname: RJIL_JioCinema',
+    'content-type: application/json',
+    'deviceid: 7c292c7d-0725-4e30-a01e-25e44efc6160',
+    'origin: https://www.jiocinema.com',
+    'referer: https://www.jiocinema.com/',
+    'sec-ch-ua: "Chromium";v="111", "Not(A:Brand";v="8"',
+    'sec-ch-ua-mobile: ?0',
+    'sec-ch-ua-platform: "Linux"',
+    'sec-fetch-dest: empty',
+    'sec-fetch-mode: cors',
+    'sec-fetch-site: cross-site',
+    'uniqueid: 30ce8d99-12c3-41f7-aa81-e62fab71297a',
+    'user-agent: ' . $user_agent,
+    'versioncode: 2404232',
+    'x-apisignatures: o668nxgzwff',
+    'x-platform: androidtv',
+    'x-platform-token: androidtv',
+];
+
+// Initialize cURL session
+$ch = curl_init($url);
+
+// Set the cURL options
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $json_payload);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+// Execute the cURL request and get the response
+$response = curl_exec($ch);
+
+// Close the cURL session
+curl_close($ch);
+
+// Initialize output array
+$output = [];
+
+// Check if the response is not empty
+if ($response) {
+    // Decode the JSON response
+    $response_data = json_decode($response, true);
+
+    // Attempt to extract M3U8 URL
+    $mpd_url = $response_data['data']['playbackUrls'][0]['url'] ?? null;
+
+    if ($mpd_url) {
+        // Initialize a new cURL session for the redirection
+        $ch = curl_init($mpd_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+        curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
+
+        // Extract headers
+        $header_response = curl_exec($ch);
+        curl_close($ch);
+
+        // Grab cookie
+        if (preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $header_response, $matches)) {
+            $cookie = implode('; ', $matches[1]);
+
+            // Extract the hdntl part of the cookie
+            if (preg_match('/hdntl=([^;]*)/', $cookie, $match)) {
+                $hdntl = $match[1];
+
+                // Parse the expiry time from the hdntl string
+                if (preg_match('/exp=(\d+)/', $hdntl, $exp_match)) {
+                    $expiry_time = $exp_match[1];
+
+                    // Convert the expiry time to IST
+                    $expiry_time_ist = gmdate("Y-m-d H:i:s", $expiry_time + 19800); // 19800 seconds = 5 hours 30 minutes
+
+                    // Prepare the output
+                    $output = [
+                        "cookies" => "hdntl=" . $hdntl,
+                        "user_agent" => $user_agent,
+                        "expiry_time_ist" => $expiry_time_ist
+                    ];
+                } else {
+                    $output = ["error" => "Expiry time not found in hdntl"];
                 }
+            } else {
+                $output = ["error" => "hdntl cookie not found"];
             }
+        } else {
+            $output = ["error" => "Cookies not found in response"];
         }
+    } else {
+        $output = ["error" => "MPD URL not found in response"];
     }
-    return null;
+} else {
+    $output = ["error" => "Empty response from API"];
 }
-function getChannelInfo(string $id): array {
-    $json = @file_get_contents('https://raw.githubusercontent.com/ttoor5/tataplay_urls/main/origin.json');
-    $channels = $json !== false ? json_decode($json, true) : null;
-    if ($channels === null) {
-        exit;
-    }
-    foreach ($channels as $channel) {
-        if ($channel['id'] == $id) return $channel;
-    }
-    exit;
-}
-$id = $_GET['id'] ?? exit;
-$channelInfo = getChannelInfo($id);
-$dashUrl = $channelInfo['streamData']['MPD='] ?? exit;
-if (strpos($dashUrl, 'https://bpprod') !== 0) {
-    header("Location: $dashUrl");
-    exit;
-}
-$manifestContent = fetchMPDManifest($dashUrl) ?? exit;
-$baseUrl = dirname($dashUrl);
-$widevinePssh = extractPsshFromManifest($manifestContent, $baseUrl);
-$processedManifest = str_replace('dash/', "$baseUrl/dash/", $manifestContent);
-if ($widevinePssh) {
-    $processedManifest = str_replace(
-      '<ContentProtection value="cenc" schemeIdUri="urn:mpeg:dash:mp4protection:2011"/>',
-      '<!-- Common Encryption -->
-      <ContentProtection schemeIdUri="urn:mpeg:dash:mp4protection:2011" value="cenc" cenc:default_KID="' . $widevinePssh['kid'] . '">
-      </ContentProtection>',
-      $processedManifest
-    );
-    $processedManifest = str_replace(
-      '<ContentProtection schemeIdUri="urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95" value="PlayReady"/>
-      <ContentProtection schemeIdUri="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed" value="Widevine"/>',
-      '<!-- Widevine -->
-      <ContentProtection schemeIdUri="urn:uuid:EDEF8BA9-79D6-4ACE-A3C8-27DCD51D21ED">
-        <cenc:pssh>' . $widevinePssh['pssh'] . '</cenc:pssh>
-      </ContentProtection>',
-      $processedManifest
-    );
-}
-if (in_array($id, ['244', '599', '484'])) {
-    $processedManifest = str_replace(
-        'minBandwidth="226400" maxBandwidth="3187600" maxWidth="1920" maxHeight="1080"',
-        'minBandwidth="226400" maxBandwidth="2452400" maxWidth="1280" maxHeight="720"',
-        $processedManifest
-    );
-    $processedManifest = preg_replace('/<Representation id="video=3187600" bandwidth="3187600".*?<\/Representation>/s', '', $processedManifest);
-}
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header('Content-Type: application/dash+xml');
-header('Content-Disposition: attachment; filename="script_by_drmlive' . urlencode($id) . '.mpd"');
-echo $processedManifest;
+
+// Output the result in JSON format
+header('Content-Type: application/json');
+echo json_encode($output, JSON_PRETTY_PRINT);
+
 ?>
