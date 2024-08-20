@@ -6,7 +6,7 @@
   },
   "routes": [
     {
-      "src": "/(.*),
+      "src": "/(.*)",
       "dest": "/api/index.php",
       "headers": {
         "Cache-Control": "max-age=20, public"
