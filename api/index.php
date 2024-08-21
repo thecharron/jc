@@ -1,147 +1,115 @@
 <?php
-// Define the payload as an associative array
-$payload = [
-    '4k' => false,
-    'ageGroup' => '18+',
-    'appVersion' => '3.4.0',
-    'bitrateProfile' => 'xhdpi',
-    'capability' => [
-        'drmCapability' => [
-            'aesSupport' => 'yes',
-            'fairPlayDrmSupport' => 'yes',
-            'playreadyDrmSupport' => 'none',
-            'widevineDRMSupport' => 'yes',
-        ],
-        'frameRateCapability' => [
-            [
-                'frameRateSupport' => '30fps',
-                'videoQuality' => '1440p',
-            ],
-        ],
-    ],
-    'continueWatchingRequired' => true,
-    'dolby' => false,
-    'downloadRequest' => false,
-    'hevc' => false,
-    'kidsSafe' => false,
-    'manufacturer' => 'Linux',
-    'model' => 'Linux',
-    'multiAudioRequired' => true,
-    'osVersion' => 'x86_64',
-    'parentalPinValid' => true,
-    'x-apisignatures' => 'o668nxgzwff',
-];
 
-// Convert the payload to JSON
-$json_payload = json_encode($payload);
+// First part: Obtain authToken
+$auth_url = 'https://auth-jiocinema.voot.com/tokenservice/apis/v4/refreshtoken';
 
-// API URL
-$url = "https://apis-jiovoot.voot.com/playbackjv/v5/3479312";
+$auth_headers = array(
+    'authority: auth-jiocinema.voot.com',
+    'accept: application/json, text/plain, */*',
+    'accept-language: en-GB,en-US;q=0.9,en;q=0.8',
+    'accesstoken: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImF1dGhUb2tlbklkIjoiOWIzN2U3ZmItOWI2Ni00ZTA4LWI2YzgtNTFlZDhkMDZhNTFlIiwidXNlcklkIjoiMzBjZThkOTktMTJjMy00MWY3LWFhODEtZTYyZmFiNzEyOTdhIiwidXNlclR5cGUiOiJOT05KSU8iLCJvcyI6IndlYiIsImRldmljZVR5cGUiOiJwYyIsImFjY2Vzc0xldmVsIjoiOSIsImRldmljZUlkIjoiN2MyOTJjN2QtMDcyNS00ZTMwLWEwMWUtMjVlNDRlZmM2MTYwIiwiZXh0cmEiOiJ7XCJudW1iZXJcIjpcImRhZVZoV0ZBVUJCdVhMYTJORE1WSWxUelpTUFNEb281QXNTdmdaL2N1ZWVSNDRqd1lZRDEwV1E9XCIsXCJhZHNcIjpcInllc1wiLFwicGxhbmRldGFpbHNcIjp7XCJhZHNcIjpcInllc1wiLFwiUGFja2FnZUluZm9cIjpbe1wicGxhbmlkXCI6XCJwbGFuLTRkNGQ3NDNkLWEwZDktNGEyYy04ZjQ4LWQ0NjM1NTIyMDA5YVwiLFwic3Vic2NyaXB0aW9uc3RhcnRcIjoxNzA5ODgzMjkzMjIwLFwic3Vic2NyaXB0aW9uZW5kXCI6MTc0MTc0NDc5OTk5OSxcInBsYW50eXBlXCI6XCJwcmVtaXVtXCIsXCJidXNpbmVzc1R5cGVcIjpcIlByZW1pdW1cIixcImluU3RyZWFtQWRzXCI6XCJFbmFibGVcIixcImRpc3BsYXlBZHNcIjpcIkVuYWJsZVwiLFwiaXNhY3RpdmVcIjp0cnVlLFwibm90ZXNcIjpcIlwiLFwicGxhbkRldGFpbHNcIjp7XCJmZWF0dXJlXCI6e1widmFsdWVcIjp7XCJBZHNDb25maWdcIjp7XCJkaXNwbGF5QWRzXCI6e1wibWFzdGhlYWRcIjp0cnVlLFwiYmFubmVyQWRzXCI6e1wiaW5CZXR3ZWVuVHJheUFkc1wiOnRydWUsXCJiZWxvd1BsYXllckFkc1wiOnRydWV9fSxcImluc3RyZWFtQWRzXCI6e1wibGl2ZVwiOntcInByZVJvbGxcIjp0cnVlLFwibWlkUm9sbFwiOnRydWV9LFwidm9kXCI6e1wicHJlUm9sbFwiOm51bGwsXCJtaWRSb2xsXCI6dHJ1ZX19fX19fX1dfSxcImpUb2tlblwiOlwiXCIsXCJ1c2VyRGV0YWlsc1wiOlwiMVNEWXJURGdydVdrQ2VZUnRrOFl2UVIram45ZGJNMndka3daSk9weDNTZ00wQ0RTY2VLZy81bVEyWjV0SFRNa3FOZDVWbjROWEp5bnZMV0s1VmR4OUN5OVVyMjRPK0hvRXk5YVhXcVZaN2M0OEsrK0d4UWtiMm1GZnF0cTVkZVpwVmRCMDJhNk9ERjZrNTR4VjVDTDdGYmYwdG1mMVViczk3cm5IMEFzZUE9PVwifSIsInN1YnNjcmliZXJJZCI6IiIsImFwcE5hbWUiOiJSSklMX0ppb0NpbmVtYSIsImRlZ3JhZGVkIjoiZmFsc2UiLCJhZHMiOiJ5ZXMiLCJwcm9maWxlSWQiOiJhYWY1NDllYy01MTk4LTRjODYtYjMyZC1kN2RlM2UxMzM0YzciLCJhZElkIjoiN2MyOTJjN2QtMDcyNS00ZTMwLWEwMWUtMjVlNDRlZmM2MTYwIiwiYWRzQ29uZmlnIjp7Imluc3RyZWFtQWRzIjp7ImxpdmUiOnsiZW5hYmxlZCI6dHJ1ZX0sInZvZCI6eyJlbmFibGVkIjp0cnVlfX19LCJleHBlcmltZW50S2V5Ijp7ImNvbmZpZ0tleSI6ImFhZjU0OWVjLTUxOTgtNGM4Ni1iMzJkLWQ3ZGUzZTEzMzRjNyIsImdyb3VwSWQiOjM1ODR9LCJwcm9maWxlRGV0YWlscyI6eyJwcm9maWxlVHlwZSI6ImFkdWx0IiwiY29udGVudEFnZVJhdGluZyI6IkEifSwidmVyc2lvbiI6MjAyNDAzMDQwfSwiZXhwIjoxNzE0MTMxNjc5LCJpYXQiOjE3MTQxMjQ0Nzl9.-TwxKiP0wQlQNFo9rOyjU4Plr0Fp2TpWALQwHCpdgFqr5vXBNKlvLKdvbtN7FuLEK48ansxycEHYh3a1Y0qUfw',
+    'content-type: application/json',
+    'origin: https://www.jiocinema.com',
+    'referer: https://www.jiocinema.com/',
+    'sec-ch-ua: "Chromium";v="111", "Not(A:Brand";v="8"',
+    'sec-ch-ua-mobile: ?1',
+    'sec-ch-ua-platform: "Android"',
+    'sec-fetch-dest: empty',
+    'sec-fetch-mode: cors',
+    'sec-fetch-site: cross-site',
+    'user-agent: Mozilla/5.0 (Linux; Android 11; M2101K6P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Mobile Safari/537.36'
+);
 
-// Headers
-$user_agent = 'Mozilla/5.0 (Linux; Android 10; BRAVIA 4K VH2 Build/QTG3.200305.006.S292; wv)';
-$headers = [
+$auth_data = array(
+    'appName' => 'RJIL_JioCinema',
+    'deviceId' => '7c292c7d-0725-4e30-a01e-25e44efc6160',
+    'refreshToken' => '278c539b-5e6a-48ef-be56-78aac997b80d',
+    'appVersion' => '24.04.23.2-dae57af4'
+);
+
+$ch = curl_init($auth_url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $auth_headers);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($auth_data));
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Only for testing purposes, remove in production.
+
+$response = curl_exec($ch);
+
+if(curl_error($ch)) {
+    echo json_encode(['error' => curl_error($ch)]);
+    curl_close($ch);
+    exit();
+}
+
+curl_close($ch);
+
+$auth_response = json_decode($response, true);
+$auth_token = $auth_response['authToken'];
+
+// Second part: Use authToken to fetch license URL
+$content_id = '3774142'; // Default content_id
+
+$ch = curl_init();
+
+curl_setopt($ch, CURLOPT_URL, 'https://apis-jiovoot.voot.com/playbackjv/v4/' . $content_id);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Linux; Android 11; M2101K6P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Mobile Safari/537.36");
+curl_setopt($ch, CURLOPT_POSTFIELDS, '{"4k":false,"ageGroup":"18+","appVersion":"3.4.0","bitrateProfile":"xhdpi","capability":{"drmCapability":{"aesSupport":"yes","fairPlayDrmSupport":"yes","playreadyDrmSupport":"none","widevineDRMSupport":"yes"},"frameRateCapability":[{"frameRateSupport":"30fps","videoQuality":"1440p"}]},"continueWatchingRequired":false,"dolby":false,"downloadRequest":false,"hevc":false,"kidsSafe":false,"manufacturer":"Android","model":"Android","multiAudioRequired":true,"osVersion":"11","parentalPinValid":true,"x-apisignatures":"o668nxgzwff"}');
+curl_setopt($ch, CURLOPT_HTTPHEADER, array(
     'authority: apis-jiovoot.voot.com',
     'accept: application/json, text/plain, */*',
     'accept-language: en-GB,en-US;q=0.9,en;q=0.8',
-    'accesstoken: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJJZCI6IjliMjAyZDRhLWY5NmUtNGI3YS1hYTEyLTcyMzAxYTRiNjQ5NyIsInVzZXJUeXBlIjoiR1VFU1QiLCJhcHBOYW1lIjoiUkpJTF9KaW9DaW5lbWEiLCJkZXZpY2VJZCI6ImFlMmQ0NzU2LWEyZjctNDcyMy1jZDc5LTgzNTE3NDI2OWVmMCIsImRldmljZVR5cGUiOiJwYyIsIm9zIjoid2ViIiwicHJvZmlsZUlkIjoiNGI5ZDY5ZjktY2MyYi0xMjQ3LTI0NDItNjJhNGIwOGQ0Y2IyIiwiYWRJZCI6ImFlMmQ0NzU2LWEyZjctNDcyMy1jZDc5LTgzNTE3NDI2OWVmMCIsImV4cGVyaW1lbnRLZXkiOnsiY29uZmlnS2V5IjoiNGI5ZDY5ZjktY2MyYi0xMjQ3LTI0NDItNjJhNGIwOGQ0Y2IyIiwiZ3JvdXBJZCI6MjI4Nn0sInByb2ZpbGVEZXRhaWxzIjp7InByb2ZpbGVUeXBlIjoiYWR1bHQiLCJjb250ZW50QWdlUmF0aW5nIjoiQSJ9LCJ2ZXJzaW9uIjoyMDI0MDMwNDB9LCJleHAiOjE3MjYyMzQ0OTcsImlhdCI6MTcyMzY0MjQ5N30.0szYuRB-DwGbsmhdt4xJwMgu9r_swCc8QjE9HV4LEXrILnR1MdzIzR0Vl6_k6HcgA_J7ZyEvmLOcvlnPS7xzog',
+    'accesstoken: '.$auth_token, 
     'appname: RJIL_JioCinema',
     'content-type: application/json',
     'deviceid: 7c292c7d-0725-4e30-a01e-25e44efc6160',
     'origin: https://www.jiocinema.com',
     'referer: https://www.jiocinema.com/',
     'sec-ch-ua: "Chromium";v="111", "Not(A:Brand";v="8"',
-    'sec-ch-ua-mobile: ?0',
-    'sec-ch-ua-platform: "Linux"',
+    'sec-ch-ua-mobile: ?1',
+    'sec-ch-ua-platform: "Android"',
     'sec-fetch-dest: empty',
     'sec-fetch-mode: cors',
     'sec-fetch-site: cross-site',
     'uniqueid: 30ce8d99-12c3-41f7-aa81-e62fab71297a',
-    'user-agent: ' . $user_agent,
-    'versioncode: 2404232',
+    'user-agent: Mozilla/5.0 (Linux; Android 10; BRAVIA 4K VH2 Build/QTG3.200305.006.S292; wv)',
+    'versioncode: 2311220',
     'x-apisignatures: o668nxgzwff',
     'x-platform: androidtv',
-    'x-platform-token: androidtv',
-];
+    'x-platform-token: androidtv'
+));
 
-// Initialize cURL session
-$ch = curl_init($url);
-
-// Set the cURL options
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $json_payload);
-curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-// Execute the cURL request and get the response
-$response = curl_exec($ch);
+// Execute curl and store the result
+$result = curl_exec($ch);
 
 // Close the cURL session
 curl_close($ch);
 
-// Initialize output array
-$output = [];
+// Decode the JSON response
+$response = json_decode($result, true);
 
-// Check if the response is not empty
-if ($response) {
-    // Decode the JSON response
-    $response_data = json_decode($response, true);
-
-    // Attempt to extract M3U8 URL
-    $mpd_url = $response_data['data']['playbackUrls'][0]['url'] ?? null;
-
-    if ($mpd_url) {
-        // Initialize a new cURL session for the redirection
-        $ch = curl_init($mpd_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HEADER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_NOBODY, true);
-        curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
-
-        // Extract headers
-        $header_response = curl_exec($ch);
-        curl_close($ch);
-
-        // Grab cookie
-        if (preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $header_response, $matches)) {
-            $cookie = implode('; ', $matches[1]);
-
-            // Extract the hdntl part of the cookie
-            if (preg_match('/hdntl=([^;]*)/', $cookie, $match)) {
-                $hdntl = $match[1];
-
-                // Parse the expiry time from the hdntl string
-                if (preg_match('/exp=(\d+)/', $hdntl, $exp_match)) {
-                    $expiry_time = $exp_match[1];
-
-                    // Convert the expiry time to IST
-                    $expiry_time_ist = gmdate("Y-m-d H:i:s", $expiry_time + 19800); // 19800 seconds = 5 hours 30 minutes
-
-                    // Prepare the output
-                    $output = [
-                        "cookies" => "hdntl=" . $hdntl,
-                        "user_agent" => $user_agent,
-                        "expiry_time_ist" => $expiry_time_ist
-                    ];
-                } else {
-                    $output = ["error" => "Expiry time not found in hdntl"];
-                }
-            } else {
-                $output = ["error" => "hdntl cookie not found"];
-            }
-        } else {
-            $output = ["error" => "Cookies not found in response"];
-        }
+// Check if playbackUrls exist and extract license URL value
+if (isset($response['data']['playbackUrls'][0]['url'])) {
+    $full_url = $response['data']['playbackUrls'][0]['url'];
+    
+    // Parse the query string from the full URL
+    parse_str(parse_url($full_url, PHP_URL_QUERY), $query_params);
+    
+    // Check if 'hdnts' exists in the query parameters and extract it
+    if (isset($query_params['hdnts'])) {
+        $licenseurl = $query_params['hdnts'];
+        $output = ['licenseurl' => $licenseurl];
     } else {
-        $output = ["error" => "MPD URL not found in response"];
+        $output = ['error' => 'hdnts parameter not found'];
     }
 } else {
-    $output = ["error" => "Empty response from API"];
+    $output = ['error' => 'License URL not found'];
 }
 
-// Output the result in JSON format
+
+// Print the output in JSON format
 header('Content-Type: application/json');
-echo json_encode($output, JSON_PRETTY_PRINT);
+echo json_encode($output);
 
 ?>
